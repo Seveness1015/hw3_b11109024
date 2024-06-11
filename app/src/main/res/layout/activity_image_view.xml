@@ -8,24 +8,33 @@
         android:id="@+id/imageView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:alpha="0.4"
+        android:background="#B9B7BA"
+        android:backgroundTintMode="add"
         android:scaleType="fitCenter"
-        android:src="@drawable/john" />
+        android:src="@drawable/pic_02" />
 
     <Button
-        android:id="@+id/btnRotate"
-        android:layout_width="111dp"
+        android:id="@+id/btnApplyFilter"
+        android:layout_width="130dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentBottom="true"
         android:layout_marginStart="150dp"
         android:layout_marginBottom="60dp"
-        android:text="旋轉" />
+        android:backgroundTint="#A9BCDA"
+        android:drawableTint="#FFFFFF"
+        android:foregroundTint="#7E1616"
+        android:text="Apply Filter" />
 
     <Button
         android:id="@+id/btnReturnToHome"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:text="返回" />
+        android:layout_margin="40dp"
+        android:layout_marginStart="40dp"
+        android:backgroundTint="#A9BCDA"
+        android:backgroundTintMode="src_in"
+        android:text="HomePage" />
 
 </RelativeLayout>

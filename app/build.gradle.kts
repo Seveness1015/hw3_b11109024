@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.storage.CacheResetOnProcessCanceled.enabled
 
 plugins {
-            alias(libs.plugins.androidApplication)
-            alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.jetbrainsKotlinAndroid)
 }
 
 android {

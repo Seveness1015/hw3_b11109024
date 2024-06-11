@@ -3,10 +3,14 @@ package com.example.hw3_b11109024
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
@@ -16,30 +20,24 @@ import java.io.FileOutputStream
 class FilterWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     companion object {
-        const val CHANNEL_ID = "filter_channel" // notify channel "filter_channel"
+        const val CHANNEL_ID = "filter_channel"
 
-        // data input
         fun createInputData() =
             workDataOf()
     }
 
     override suspend fun doWork(): Result {
-        // chose picture
         val inputBitmap = BitmapFactory.decodeResource(applicationContext.resources, R.drawable.pic_01)
-        val filteredBitmap = applyBlackAndWhiteFilter(inputBitmap) // 使用黑白濾鏡
+        val filteredBitmap = applyBlackAndWhiteFilter(inputBitmap)
 
-        // store processed picture
         val filteredBitmapFile = saveBitmapToFile(filteredBitmap)
-        val outputData = workDataOf("filteredBitmapFilePath" to filteredBitmapFile.absolutePath) // rotatedBitmapFilePath 改為 filteredBitmapFilePath
+        val outputData = workDataOf("filteredBitmapFilePath" to filteredBitmapFile.absolutePath)
 
-        // notify user already processed
-        sendNotification("Image Filtered", "The image has been filtered.", filteredBitmapFile.absolutePath) // Image Rotated 改為 Image Filtered
+        sendNotification("Image Filtered", "The image has been filtered.", filteredBitmapFile.absolutePath)
 
-        // return output
         return Result.success(outputData)
     }
 
-    // Filter(Black And White)
     private fun applyBlackAndWhiteFilter(bitmap: Bitmap): Bitmap {
         val width = bitmap.width
         val height = bitmap.height
@@ -60,18 +58,16 @@ class FilterWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         return blackAndWhiteBitmap
     }
 
-    // store picture
     private fun saveBitmapToFile(bitmap: Bitmap): File {
         val file = File(applicationContext.filesDir, "filtered_image.jpg")
+        FileOutputStream(file).use { outputStream ->
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
         }
         return file
     }
 
-    // sent notify
     @SuppressLint("MissingPermission")
     private fun sendNotification(title: String, message: String, filePath: String) {
-        // check Android version
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Filter Notification"
             val descriptionText = "Notifications for image filter"
@@ -84,7 +80,6 @@ class FilterWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             notificationManager.createNotificationChannel(channel)
         }
 
-        // notify to output
         val intent = Intent(applicationContext, ImageViewActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("imagePath", filePath)
@@ -92,7 +87,6 @@ class FilterWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val pendingIntent: PendingIntent =
             PendingIntent.getActivity(applicationContext, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
-        // notify
         val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_icon)
             .setContentTitle(title)
@@ -101,7 +95,6 @@ class FilterWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
 
-        // sent notify
         with(NotificationManagerCompat.from(applicationContext)) {
             notify(12345, builder.build())
         }
