@@ -4,16 +4,6 @@
     android:layout_height="match_parent"
     tools:context=".ImageViewActivity">
 
-    <ImageView
-        android:id="@+id/imageView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:alpha="0.4"
-        android:background="#B9B7BA"
-        android:backgroundTintMode="add"
-        android:scaleType="fitCenter"
-        android:src="@drawable/pic_02" />
-
     <Button
         android:id="@+id/btnApplyFilter"
         android:layout_width="130dp"
@@ -36,5 +26,12 @@
         android:backgroundTint="#A9BCDA"
         android:backgroundTintMode="src_in"
         android:text="HomePage" />
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        />
 
 </RelativeLayout>
