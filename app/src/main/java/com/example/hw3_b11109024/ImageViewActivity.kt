@@ -36,7 +36,7 @@ class ImageViewActivity : AppCompatActivity() {
             Glide.with(this).load(path).into(imageView)
         }
 
-        // 設定黑白濾鏡按鈕的點擊行為
+        // set Black & White Filter
         btnApplyFilter.setOnClickListener {
             // touch button, run filter work
             val filterWork = OneTimeWorkRequestBuilder<FilterWorker>()
@@ -45,9 +45,8 @@ class ImageViewActivity : AppCompatActivity() {
             WorkManager.getInstance(applicationContext).enqueue(filterWork)
         }
 
-        // back-to-homepage button
         btnReturnToHome.setOnClickListener {
-            finish() // close page
+            finish() // back-to-homepage button
         }
     }
 
