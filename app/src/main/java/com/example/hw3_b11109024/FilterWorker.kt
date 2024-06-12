@@ -1,79 +1,91 @@
 package com.example.hw3_b11109024
 
-import android.app.NotificationManager
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 
 /**
- * Worker class to apply a black and white filter to an image.
+ * Worker class to apply a vertical flip filter to an image.
  */
 class FilterWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
+    companion object {
+        const val CHANNEL_ID = "rotate_channel" // Notification channel ID
+        fun createInputData() = workDataOf()
+    }
+
     override suspend fun doWork(): Result {
-        // Get the image URI from input data
-        val imageUri = inputData.getString("imageUri")
+        val imageUriString = inputData.getString("imageUri")
+        val imageUri = Uri.parse(imageUriString)
 
         // Load Bitmap from URI
-        val inputBitmap = imageUri?.let { uri ->
-            val inputStream = applicationContext.contentResolver.openInputStream(Uri.parse(uri))
-            BitmapFactory.decodeStream(inputStream)
-        } ?: return Result.failure()
+        val inputBitmap = loadBitmapFromUri(imageUri) ?: return Result.failure()
 
-        // Apply black and white filter
-        val filteredBitmap = applyBlackAndWhiteFilter(inputBitmap)
+        // Apply horizontal flip
+        val flippedBitmap = applyHorizontalFlip(inputBitmap)
 
-        // Save filtered image to a file
-        val filteredBitmapFile = saveBitmapToFile(filteredBitmap)
+        // Save flipped image to a file
+        val flippedBitmapFile = saveBitmapToFile(flippedBitmap)
 
-        // Create output data with file path of the filtered image
-        val outputData = workDataOf("filteredBitmapFilePath" to filteredBitmapFile.absolutePath)
+        // Send notification about the flipped image
+        sendNotification("Image Flipped", "The image has been flipped horizontally.", flippedBitmapFile.absolutePath)
 
-        // Send notification about the filtered image
-        sendNotification("Image Filtered", "The image has been filtered.", filteredBitmapFile.absolutePath)
-
-        return Result.success(outputData)
+        return Result.success()
     }
 
     /**
-     * Apply a simple black and white filter to a Bitmap.
+     * Load Bitmap from URI.
      */
-    private fun applyBlackAndWhiteFilter(bitmap: Bitmap): Bitmap {
+    private fun loadBitmapFromUri(uri: Uri): Bitmap? {
+        var inputStream: InputStream? = null
+        try {
+            inputStream = applicationContext.contentResolver.openInputStream(uri)
+            return BitmapFactory.decodeStream(inputStream)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            inputStream?.close()
+        }
+        return null
+    }
+
+    /**
+     * Apply a horizontal flip to Bitmap.
+     */
+    private fun applyHorizontalFlip(bitmap: Bitmap): Bitmap {
         val width = bitmap.width
         val height = bitmap.height
-        val blackAndWhiteBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val flippedBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 
         for (x in 0 until width) {
             for (y in 0 until height) {
-                val pixel = bitmap.getPixel(x, y)
-                val red = (pixel shr 16) and 0xFF
-                val green = (pixel shr 8) and 0xFF
-                val blue = pixel and 0xFF
-                val gray = (red + green + blue) / 3
-                val newPixel = (0xFF shl 24) or (gray shl 16) or (gray shl 8) or gray
-                blackAndWhiteBitmap.setPixel(x, y, newPixel)
+                flippedBitmap.setPixel(width - x - 1, y, bitmap.getPixel(x, y))
             }
         }
 
-        return blackAndWhiteBitmap
+        return flippedBitmap
     }
 
     /**
      * Save a Bitmap to a file in internal storage.
      */
     private fun saveBitmapToFile(bitmap: Bitmap): File {
-        val file = File(applicationContext.filesDir, "filtered_image.jpg")
+        val file = File(applicationContext.filesDir, "rotated_image.jpg")
         FileOutputStream(file).use { outputStream ->
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
         }
@@ -81,23 +93,24 @@ class FilterWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     }
 
     /**
-     * Send a notification to inform the user about the filtered image.
+     * Send a notification to inform the user about the flipped image.
      */
+    @SuppressLint("MissingPermission")
     private fun sendNotification(title: String, message: String, filePath: String) {
-        // Create notification channel for Android Oreo and above
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val name = "Filtered Image Notification"
-            val descriptionText = "Notification for filtered image"
+        // Create notification channel if device is running Android O or higher
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Rotate Notification"
+            val descriptionText = "Notifications for image rotation"
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
             }
-            val notificationManager =
+            val notificationManager: NotificationManager =
                 applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Intent to open ImageViewActivity with the filtered image
+        // Intent to open ImageViewActivity with flipped image path
         val intent = Intent(applicationContext, ImageViewActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("imagePath", filePath)
@@ -105,7 +118,7 @@ class FilterWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val pendingIntent: PendingIntent =
             PendingIntent.getActivity(applicationContext, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
-        // Build the notification
+        // Build notification
         val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_icon)
             .setContentTitle(title)
@@ -114,20 +127,9 @@ class FilterWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
 
-        // Send the notification
+        // Send notification
         with(NotificationManagerCompat.from(applicationContext)) {
-            notify(NOTIFICATION_ID, builder.build())
+            notify(12345, builder.build())
         }
-    }
-
-    companion object {
-        private const val CHANNEL_ID = "image_filter_channel"
-        private const val NOTIFICATION_ID = 12345
-
-        /**
-         * Create input data for FilterWorker.
-         */
-        fun createInputData(imageUri: String) =
-            workDataOf("imageUri" to imageUri)
     }
 }

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">hw3_b11109024</string>
+    <string name="home_page">b11109024_hw3_v8(horizontal flip)</string>
+    <string name="filter_page"> Filter </string>
 </resources>

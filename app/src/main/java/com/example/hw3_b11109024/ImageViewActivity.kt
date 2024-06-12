@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import androidx.annotation.RequiresApi
@@ -26,53 +25,37 @@ class ImageViewActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_image_view)
 
-        // Initialize UI elements
         imageView = findViewById(R.id.imageView)
         btnApplyFilter = findViewById(R.id.btnApplyFilter)
         btnReturnToHome = findViewById(R.id.btnReturnToHome)
 
-        // get path(original picture)
         originalImageUri = intent.getStringExtra("imageUri")
+        val imagePath = intent.getStringExtra("imagePath") // Get flipped image path
 
-        // load picture(original)
-        originalImageUri?.let { uri ->
-            // load pucture to ImageView(by Glide)
-            Glide.with(this).load(uri).into(imageView)
+        // Load original or flipped image
+        if (imagePath != null) {
+            Glide.with(this).load(imagePath).into(imageView)
+        } else {
+            originalImageUri?.let { uri ->
+                Glide.with(this).load(uri).into(imageView)
+            }
         }
 
-        // setting Filter-button's apply
         btnApplyFilter.setOnClickListener {
             applyFilter()
         }
 
-        // setting home-page's button
         btnReturnToHome.setOnClickListener {
             finish()
-        }
-    }
-
-    /**
-     * hide button（if-need）
-     */
-    private fun hideButtonsIfNeeded() {
-        originalImageUri?.let {
-            btnApplyFilter.visibility = View.GONE
-            btnReturnToHome.visibility = View.GONE
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onResume() {
         super.onResume()
-        // 每次回到這個畫面時，檢查通知權限
         requestNotificationPermissionIfNeeded()
-        // 檢查並隱藏按鈕（如果需要）
-        hideButtonsIfNeeded()
     }
 
-    /**
-     * 檢查並請求通知權限（如果需要）
-     */
     @RequiresApi(Build.VERSION_CODES.O)
     private fun requestNotificationPermissionIfNeeded() {
         if (!isNotificationPermissionGranted()) {
@@ -84,31 +67,21 @@ class ImageViewActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 檢查通知權限是否已授權
-     */
     private fun isNotificationPermissionGranted(): Boolean {
-        val notificationManager =
-            getSystemService(NotificationManager::class.java)
+        val notificationManager = getSystemService(NotificationManager::class.java)
         return notificationManager?.areNotificationsEnabled() ?: false
     }
 
-    /**
-     * 開始應用圖片濾鏡
-     */
     private fun applyFilter() {
-        // 創建一個OneTimeWorkRequest來應用濾鏡
-        val filterWork = originalImageUri?.let { FilterWorker.createInputData(it) }?.let {
-            OneTimeWorkRequestBuilder<FilterWorker>()
-                .setInputData(it)
-                .build()
-        }
+        val filterWork = FilterWorker.createInputData()
 
-        // 將工作提交到WorkManager
-        filterWork?.let {
-            WorkManager.getInstance(applicationContext).enqueue(it)
+        originalImageUri?.let {
+            val workRequest = OneTimeWorkRequestBuilder<FilterWorker>()
+                .setInputData(filterWork)
+                .build()
+
+            WorkManager.getInstance(applicationContext).enqueue(workRequest)
         }
     }
 
-    companion object
 }
